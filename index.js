@@ -66,7 +66,6 @@ app.post('/sendsmpp',function(req,res) {
       res.status(502).send(error.message);
       isConnected = false;
     });
-  
   })
 
 const PORT = process.env.PUERTO || 3030;
