@@ -1,56 +1,78 @@
-const express = require('express'); 
-const cors = require('cors');
-const smppSession = require('./controllers/smpp');
-const smpp = require('smpp');
+const express = require("express");
+var smpp = require('smpp');
+// const cors = require('cors');
+// const smppSession = require('./controllers/smpp');
 
-const session = new smpp.Session({host: '172.22.93.244', port: 8001});
+const app = express();
 
-let isConnected = false
-session.on('connect', () => {
-  isConnected = true;
+app.use(express.json());
 
-  session.bind_transceiver({
-      system_id: 'VISOR_OTP',
-      password: 'V150R019',
-      system_type: 'MT', 
-  }, (pdu) => {
-    if (pdu.command_status == 0) {
-        console.log('Successfully bound')
+app.get('/',function(req,res) {
+    res.status(200).send('Welcome to the contactserviceMFA API ');
+})
 
-        session.submit_sm({
-            source_addr: '6231',
-            dest_addr_ton: 1,
-            destination_addr: '573212232702',
-            short_message: 'Testing SMPP via PCA',
-            data_coding:3,
-        }, function(pdu) {
-            console.log(pdu);
-            if (pdu.command_status == 0) {
-                // Message successfully sent
-                session.close();
-                console.log("Message successfully sent");
-                console.log(pdu.message_id);
-            }
-        });        
-    }
+app.post('/sendsmpp',function(req,res) {
+
+    let phoneNumber = req.body.phoneNumber;
+    let message = req.body.message;
+        
+    const session = new smpp.Session({host: '172.22.93.244', port: 8001});
+    let isConnected = false
+  
+    session.on('connect', () => {
+      isConnected = true;
+      console.log('Successfully bound');
+      session.bind_transceiver({
+          system_id: 'VISOR_OTP',
+          password: 'V150R019',
+          system_type: 'MT', 
+      }, (pdu) => {
+        if (pdu.command_status == 0) {
+            console.log('Successfully bound')
+  
+            session.submit_sm({
+                source_addr: '6231',
+                dest_addr_ton: 1,
+                destination_addr: phoneNumber,
+                short_message: 'message',
+                data_coding:3,
+            }, function(pdu) {
+                console.log(pdu);
+                if (pdu.command_status == 0) {
+                    // Message successfully sent
+                    session.close();
+                    console.log("Message successfully sent");
+                    res.status(200).json({
+                      status: "Success",
+                      message: "Message successfully sent",
+                      pduMessageId: pdu.message_id,
+                      sentTo: phoneNumber
+                    });                                    
+                }
+            });        
+        }
+      })      
+    })
+  
+    session.on('close', () => {
+      console.log('smpp is now disconnected') 
+      
+      if (isConnected) {        
+        session.connect();    //reconnect again
+      }
+    })
+  
+    session.on('error', error => { 
+      console.log('smpp error:', error.message)   
+      res.status(502).send(error.message);
+      isConnected = false;
+    });
+  
   })
-})
 
-session.on('close', () => {
-  console.log('smpp is now disconnected') 
-   
-  if (isConnected) {        
-    session.connect();    //reconnect again
-  }
-})
+const PORT = process.env.PUERTO || 3030;
 
-session.on('error', error => { 
-  console.log('smpp error', error)   
-  isConnected = false;
+app.listen(PORT, function(err){
+    if (err) console.log(err);
+    console.log("Server listening on PORT", PORT);
 });
-
-// const app = express();
-
-// const puerto = process.env.PUERTO || 3333;
-
-// app.listen(puerto,() => { console.log("Servidor Ok. Listing on Port: "+puerto) });
