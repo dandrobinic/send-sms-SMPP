@@ -34,7 +34,7 @@ app.post('/sendsmpp',function(req,res) {
                 source_addr: '6231',
                 dest_addr_ton: 1,
                 destination_addr: phoneNumber,
-                short_message: 'message',
+                short_message: message,
                 data_coding:3,
             }, function(pdu) {
                 console.log(pdu);
