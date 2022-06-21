@@ -56,7 +56,6 @@ app.post('/sendsmpp',function(req,res) {
   
     session.on('close', () => {
       console.log('smpp is now disconnected') 
-      
       if (isConnected) {        
         session.connect();    //reconnect again
       }
